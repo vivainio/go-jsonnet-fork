@@ -71,7 +71,7 @@ jobs:
         # separately in each cibuildwheel build container
         if: "${{ runner.os != 'Linux' }}"
         with:
-          go-version: "1.23.7"
+          go-version: "1.24.8"
 
       - name: Build wheels
         uses: pypa/cibuildwheel@ee63bf16da6cddfb925f542f2c7b59ad50e93969 # v2.22.0

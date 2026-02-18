@@ -9,7 +9,7 @@
 
 This an implementation of [Jsonnet](http://jsonnet.org/) in pure Go. It is a feature complete, production-ready implementation. Bindings to C and Python are available (but not battle-tested).
 
-This code is known to work on Go 1.23 and above. We recommend always using the newest stable release of Go.
+This code is known to work on Go 1.24 and above. We recommend always using the newest stable release of Go.
 
 Jsonnet can be used on the command line to evaluate Jsonnet input files and produce JSON, Yaml, or other outputs, or it can be used as a library.
 
@@ -96,7 +96,7 @@ func main() {
 }
 ```
 
-## Build instructions (go 1.23+)
+## Build instructions (go 1.24+)
 
 ```bash
 git clone git@github.com:google/go-jsonnet.git
