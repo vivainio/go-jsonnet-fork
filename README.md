@@ -226,12 +226,7 @@ The above command creates the _astgen/stdast.go_ file which puts the desugared s
 ## Keeping the Bazel files up to date
 Note that we maintain the Go-related Bazel targets with [the Gazelle tool](https://github.com/bazelbuild/bazel-gazelle). The Go module (_go.mod_ in the root directory) remains the primary source of truth. Gazelle analyzes both that file and the rest of the Go files in the repository to create and adjust appropriate Bazel targets for building Go packages and executable programs.
 
-After changing any dependencies within the files covered by this Go module, it is helpful to run _go mod tidy_ to ensure that the module declarations match the state of the Go source code. In order to synchronize the Bazel rules with material changes to the Go module, run the following command to invoke [Gazelle's `update-repos` command](https://github.com/bazelbuild/bazel-gazelle#update-repos):
-```bash
-bazel run //:gazelle -- update-repos -from_file=go.mod -to_macro=bazel/deps.bzl%jsonnet_go_dependencies
-```
-
-Similarly, after adding or removing Go source files, it may be necessary to synchronize the Bazel rules by running the following command:
+After changing any dependencies within the files covered by this Go module, it is helpful to run _go mod tidy_ to ensure that the module declarations match the state of the Go source code. In order to synchronize the Bazel rules with material changes to the Go module, run the gazelle command:
 ```bash
 bazel run //:gazelle
 ```
