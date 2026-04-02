@@ -242,7 +242,7 @@ func TestExtReset(t *testing.T) {
 		t.Fatalf("unexpected error %v", err)
 	}
 	vm.ExtReset()
-	_, err = vm.EvaluateAnonymousSnippet("test.jsonnet", `{ str: std.extVat('fooString'), code: std.extVar('fooCode') }`)
+	_, err = vm.EvaluateAnonymousSnippet("test.jsonnet", `{ str: std.extVar('fooString'), code: std.extVar('fooCode') }`)
 	if err == nil {
 		t.Fatalf("expected error, got nil")
 	}

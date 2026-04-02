@@ -1,4 +1,4 @@
 {
-   "bar": true,
-   "foo": false
+   "foo": false,
+   "bar": true
 }
