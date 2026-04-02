@@ -251,6 +251,31 @@ func TestExtReset(t *testing.T) {
 	}
 }
 
+func TestPreserveFieldOrder(t *testing.T) {
+	input := `{ z: 1, a: 2, m: 3 }`
+
+	vm := MakeVM()
+	sorted, err := vm.EvaluateAnonymousSnippet("test.jsonnet", input)
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+	if strings.Contains(sorted, `"z": 1`) && strings.Index(sorted, `"a"`) < strings.Index(sorted, `"z"`) {
+		// "a" comes before "z" — correct alphabetical order
+	} else if strings.Index(sorted, `"z"`) < strings.Index(sorted, `"a"`) {
+		t.Errorf("expected alphabetical order by default, got: %s", sorted)
+	}
+
+	vm2 := MakeVM()
+	vm2.PreserveFieldOrder = true
+	ordered, err := vm2.EvaluateAnonymousSnippet("test.jsonnet", input)
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+	if strings.Index(ordered, `"z"`) > strings.Index(ordered, `"a"`) {
+		t.Errorf("expected declaration order with PreserveFieldOrder=true, got: %s", ordered)
+	}
+}
+
 func TestTLAReset(t *testing.T) {
 	vm := MakeVM()
 	vm.TLAVar("fooString", "bar")
