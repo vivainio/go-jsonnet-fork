@@ -269,6 +269,9 @@ type interpreter struct {
 	// Native functions
 	nativeFuncs map[string]*NativeFunction
 
+	// When true, object fields are output in declaration order rather than sorted
+	preserveFieldOrder bool
+
 	// A part of std object common to all files
 	baseStd *valueObject
 
@@ -794,7 +797,7 @@ func (i *interpreter) manifestJSON(v value) (interface{}, error) {
 	}
 }
 
-func serializeJSON(v interface{}, multiline bool, indent string, buf *bytes.Buffer) {
+func serializeJSON(v interface{}, multiline bool, indent string, buf *bytes.Buffer, preserveFieldOrder bool) {
 	switch v := v.(type) {
 	case nil:
 		buf.WriteString("null")
@@ -815,7 +818,7 @@ func serializeJSON(v interface{}, multiline bool, indent string, buf *bytes.Buff
 			for _, elem := range v {
 				buf.WriteString(prefix)
 				buf.WriteString(indent2)
-				serializeJSON(elem, multiline, indent2, buf)
+				serializeJSON(elem, multiline, indent2, buf, preserveFieldOrder)
 				if multiline {
 					prefix = ",\n"
 				} else {
@@ -840,7 +843,14 @@ func serializeJSON(v interface{}, multiline bool, indent string, buf *bytes.Buff
 		buf.WriteString(unparseNumber(v))
 
 	case jsonOrderedObject:
-		if len(v.keys) == 0 {
+		keys := v.keys
+		if !preserveFieldOrder {
+			sorted := make([]string, len(keys))
+			copy(sorted, keys)
+			sort.Strings(sorted)
+			keys = sorted
+		}
+		if len(keys) == 0 {
 			buf.WriteString("{ }")
 		} else {
 			var prefix string
@@ -852,7 +862,7 @@ func serializeJSON(v interface{}, multiline bool, indent string, buf *bytes.Buff
 				prefix = "{"
 				indent2 = indent
 			}
-			for _, fieldName := range v.keys {
+			for _, fieldName := range keys {
 				fieldVal := v.fields[fieldName]
 
 				buf.WriteString(prefix)
@@ -861,7 +871,7 @@ func serializeJSON(v interface{}, multiline bool, indent string, buf *bytes.Buff
 				buf.WriteString(unparseString(fieldName))
 				buf.WriteString(": ")
 
-				serializeJSON(fieldVal, multiline, indent2, buf)
+				serializeJSON(fieldVal, multiline, indent2, buf, preserveFieldOrder)
 
 				if multiline {
 					prefix = ",\n"
@@ -891,7 +901,7 @@ func (i *interpreter) manifestAndSerializeJSON(
 	if err != nil {
 		return err
 	}
-	serializeJSON(manifested, multiline, indent, buf)
+	serializeJSON(manifested, multiline, indent, buf, i.preserveFieldOrder)
 	return nil
 }
 
@@ -927,7 +937,7 @@ func (i *interpreter) manifestAndSerializeMulti(v value, stringOutputMode bool, 
 					return r, makeRuntimeError(msg, i.getCurrentStackTrace())
 				}
 			} else {
-				serializeJSON(fileJSON, true, "", &buf)
+				serializeJSON(fileJSON, true, "", &buf, i.preserveFieldOrder)
 			}
 			if outputNewline {
 				buf.WriteString("\n")
@@ -953,7 +963,7 @@ func (i *interpreter) manifestAndSerializeYAMLStream(v value) (r []string, err e
 	case []interface{}:
 		for _, doc := range json {
 			var buf bytes.Buffer
-			serializeJSON(doc, true, "", &buf)
+			serializeJSON(doc, true, "", &buf, i.preserveFieldOrder)
 			buf.WriteString("\n")
 			r = append(r, buf.String())
 		}
@@ -1304,13 +1314,14 @@ func buildObject(hide ast.ObjectFieldHide, fields map[string]value) *valueObject
 	return makeValueSimpleObject(bindingFrame{}, fieldMap, fieldOrder, nil, nil)
 }
 
-func buildInterpreter(ext vmExtMap, nativeFuncs map[string]*NativeFunction, maxStack int, ic *importCache, traceOut io.Writer, evalHook EvalHook) (*interpreter, error) {
+func buildInterpreter(ext vmExtMap, nativeFuncs map[string]*NativeFunction, maxStack int, ic *importCache, traceOut io.Writer, evalHook EvalHook, preserveFieldOrder bool) (*interpreter, error) {
 	i := interpreter{
-		stack:       makeCallStack(maxStack),
-		importCache: ic,
-		traceOut:    traceOut,
-		nativeFuncs: nativeFuncs,
-		evalHook:    evalHook,
+		stack:              makeCallStack(maxStack),
+		importCache:        ic,
+		traceOut:           traceOut,
+		nativeFuncs:        nativeFuncs,
+		evalHook:           evalHook,
+		preserveFieldOrder: preserveFieldOrder,
 	}
 
 	stdObj, err := buildStdObject(&i)

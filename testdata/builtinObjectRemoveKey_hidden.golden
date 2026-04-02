@@ -1,12 +1,12 @@
 {
-   "fields": [
-      "baz"
-   ],
    "all_fields": [
       "bar",
       "baz"
    ],
    "bar": 2,
+   "fields": [
+      "baz"
+   ],
    "object": {
       "baz": 3
    }
