@@ -251,6 +251,33 @@ func TestExtReset(t *testing.T) {
 	}
 }
 
+func TestWrapSnippet(t *testing.T) {
+	// Test the snippet pattern used by --wrap: (wrapExpr)(valueExpr)
+	// This mirrors what cmd/jsonnet builds when --wrap is given.
+	vm := MakeVM()
+	vm.StringOutput = true
+
+	// Default quote_keys=true
+	output, err := vm.EvaluateAnonymousSnippet("test.jsonnet",
+		"(std.manifestYamlDoc)({a: 1, b: [1, 2, 3]})")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(output, `"a": 1`) {
+		t.Errorf("expected quoted YAML key by default, got: %s", output)
+	}
+
+	// With quote_keys=false via lambda
+	output2, err := vm.EvaluateAnonymousSnippet("test.jsonnet",
+		"(function(x) std.manifestYamlDoc(x, quote_keys=false))({a: 1, b: [1, 2, 3]})")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(output2, "a: 1") || strings.Contains(output2, `"a"`) {
+		t.Errorf("expected unquoted YAML keys with quote_keys=false, got: %s", output2)
+	}
+}
+
 func TestTLAReset(t *testing.T) {
 	vm := MakeVM()
 	vm.TLAVar("fooString", "bar")
