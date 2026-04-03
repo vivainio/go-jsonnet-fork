@@ -179,7 +179,7 @@ const (
 )
 
 // version is the current gojsonnet's version
-const version = "v0.22.0"
+const version = "v0.22.1-fork.1"
 
 func (vm *VM) buildConfiguredInterpreter() (*interpreter, error) {
 	return buildInterpreter(vm.ext, vm.nativeFuncs, vm.MaxStack, vm.importCache, vm.traceOut, vm.EvalHook, vm.PreserveFieldOrder)
