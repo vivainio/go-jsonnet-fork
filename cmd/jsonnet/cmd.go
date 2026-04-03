@@ -52,6 +52,8 @@ func usage(o io.Writer) {
 	fmt.Fprintln(o, "                             files")
 	fmt.Fprintln(o, "  -y / --yaml-stream         Write output as a YAML stream of JSON documents")
 	fmt.Fprintln(o, "  -S / --string              Expect a string, manifest as plain text")
+	fmt.Fprintln(o, "  --wrap <expr>              Apply <expr> to the top-level value before output,")
+	fmt.Fprintln(o, "                             e.g. --wrap std.manifestYamlDoc")
 	fmt.Fprintln(o, "  --no-trailing-newline      Do not add a trailing newline to the output")
 	fmt.Fprintln(o, "  -s / --max-stack <n>       Number of allowed stack frames")
 	fmt.Fprintln(o, "  -t / --max-trace <n>       Max length of stack trace before cropping")
@@ -102,6 +104,7 @@ type config struct {
 	evalMulti            bool
 	evalStream           bool
 	evalCreateOutputDirs bool
+	wrapExpr             string
 }
 
 func makeConfig() config {
@@ -258,6 +261,12 @@ func processArgs(givenArgs []string, config *config, vm *jsonnet.VM) (processArg
 			config.evalStream = true
 		} else if arg == "-S" || arg == "--string" {
 			vm.StringOutput = true
+		} else if arg == "--wrap" {
+			wrapExpr := cmd.NextArg(&i, args)
+			if len(wrapExpr) == 0 {
+				return processArgsStatusFailure, fmt.Errorf("--wrap argument was empty string")
+			}
+			config.wrapExpr = wrapExpr
 		} else if arg == "--no-trailing-newline" {
 			vm.OutputNewline = false
 		} else if len(arg) > 1 && arg[0] == '-' {
@@ -271,6 +280,18 @@ func processArgs(givenArgs []string, config *config, vm *jsonnet.VM) (processArg
 	// so we explicitly reject it to prevent people from relying on it.
 	if config.evalStream && !vm.OutputNewline {
 		return processArgsStatusFailure, fmt.Errorf("cannot use --no-trailing-newline with --yaml-stream")
+	}
+
+	if config.wrapExpr != "" {
+		if config.evalMulti {
+			return processArgsStatusFailure, fmt.Errorf("cannot use --wrap with --multi")
+		}
+		if config.evalStream {
+			return processArgsStatusFailure, fmt.Errorf("cannot use --wrap with --yaml-stream")
+		}
+		if vm.StringOutput {
+			return processArgsStatusFailure, fmt.Errorf("cannot use --wrap with --string")
+		}
 	}
 
 	want := "filename"
@@ -513,7 +534,18 @@ func main() {
 	var output string
 	var outputArray []string
 	var outputDict map[string]string
-	if config.filenameIsCode || config.inputFiles[0] == "-" {
+	if config.wrapExpr != "" {
+		// Build a snippet that applies the wrap expression to the top-level value.
+		var valueExpr string
+		if config.filenameIsCode || config.inputFiles[0] == "-" {
+			valueExpr = "(" + input + ")"
+		} else {
+			escaped := strings.ReplaceAll(filename, "'", "''")
+			valueExpr = "import @'" + escaped + "'"
+		}
+		vm.StringOutput = true
+		output, err = vm.EvaluateAnonymousSnippet(filename, "("+config.wrapExpr+")("+valueExpr+")")
+	} else if config.filenameIsCode || config.inputFiles[0] == "-" {
 		if config.evalMulti {
 			outputDict, err = vm.EvaluateAnonymousSnippetMulti(filename, input)
 		} else if config.evalStream {
